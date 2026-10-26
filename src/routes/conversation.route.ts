@@ -1,14 +1,15 @@
-import type { FastifyPluginCallback, FastifyReply, FastifyRequest } from "fastify";
-import { USERS_DATABASE, CONVERSATION_DATABASE } from "../index.ts";
+import type { FastifyPluginAsync } from "fastify";
 import type { IUser } from "../types.js";
 import { ObjectId } from "@fastify/mongodb";
 
-export const ConversationRoute: FastifyPluginCallback = (fastify, opts, done) => {
+export const ConversationRoute: FastifyPluginAsync = async (fastify) => {
+    const usersDatabase = fastify.database.users;
+    const conversationsDatabase = fastify.database.conversations;
 
     fastify.get("/", {preHandler: [fastify.verifyJWT]}, async (request, reply) => {
         const {userID} = request.user as IUser;
 
-        const conversationsFound = await CONVERSATION_DATABASE?.find({participants: new ObjectId(userID)}).toArray();
+        const conversationsFound = await conversationsDatabase?.find({participants: new ObjectId(userID)}).toArray();
 
         if(!conversationsFound)
             return reply.send({
@@ -24,7 +25,7 @@ export const ConversationRoute: FastifyPluginCallback = (fastify, opts, done) =>
         const {userID} = request.user as IUser;
 
         /* 1. Primero comprobamos si existe el user del ID proporcionado */
-        const userExists = await USERS_DATABASE?.findOne({_id: new ObjectId(id)});
+        const userExists = await usersDatabase?.findOne({_id: new ObjectId(id)});
 
         if(!userExists)
             return reply.code(404).send({
@@ -32,7 +33,7 @@ export const ConversationRoute: FastifyPluginCallback = (fastify, opts, done) =>
             });
 
 
-        const conversationFound = await CONVERSATION_DATABASE?.findOne({participants: { $all: [new ObjectId(userID), new ObjectId(id)], $size: 2 }})
+        const conversationFound = await conversationsDatabase?.findOne({participants: { $all: [new ObjectId(userID), new ObjectId(id)], $size: 2 }})
 
         if(!conversationFound)
             return reply.send({
@@ -48,7 +49,7 @@ export const ConversationRoute: FastifyPluginCallback = (fastify, opts, done) =>
         const {userID} = request.user as IUser;
 
         /* 1. Primero comprobamos si existe el user del ID proporcionado */
-        const userExists = await USERS_DATABASE?.findOne({_id: new ObjectId(id)});
+        const userExists = await usersDatabase?.findOne({_id: new ObjectId(id)});
 
         if(!userExists)
             return reply.code(404).send({
@@ -57,7 +58,7 @@ export const ConversationRoute: FastifyPluginCallback = (fastify, opts, done) =>
 
         /* 2. Luego comprobamos que no existe una conversación ya existente. */
 
-        const conversationExists = await CONVERSATION_DATABASE?.findOne({participants: { $all: [new ObjectId(userID), new ObjectId(id)], $size: 2 }})
+        const conversationExists = await conversationsDatabase?.findOne({participants: { $all: [new ObjectId(userID), new ObjectId(id)], $size: 2 }})
 
         if(conversationExists)
             return reply.send({
@@ -65,7 +66,7 @@ export const ConversationRoute: FastifyPluginCallback = (fastify, opts, done) =>
         })
         /* 3. Creamos la sesión si los dos requisitos se cumplen */
 
-        CONVERSATION_DATABASE?.insertOne({
+        conversationsDatabase?.insertOne({
             "participants": [
                 new ObjectId(id),
                 new ObjectId(userID),
@@ -86,7 +87,7 @@ export const ConversationRoute: FastifyPluginCallback = (fastify, opts, done) =>
         const {userID} = request.user as IUser;
 
         /* 1. Primero comprobamos si existe el user del ID proporcionado */
-        const userExists = await USERS_DATABASE?.findOne({_id: new ObjectId(id)});
+        const userExists = await usersDatabase?.findOne({_id: new ObjectId(id)});
 
         if(!userExists)
             return reply.code(404).send({
@@ -95,7 +96,7 @@ export const ConversationRoute: FastifyPluginCallback = (fastify, opts, done) =>
 
         /* 2. Luego comprobamos que no existe una conversación ya existente. */
 
-        const conversationExists = await CONVERSATION_DATABASE?.findOneAndDelete({participants: { $all: [new ObjectId(userID), new ObjectId(id)], $size: 2 }})
+        const conversationExists = await conversationsDatabase?.findOneAndDelete({participants: { $all: [new ObjectId(userID), new ObjectId(id)], $size: 2 }})
 
         if(!conversationExists)
             return reply.send({
@@ -108,5 +109,4 @@ export const ConversationRoute: FastifyPluginCallback = (fastify, opts, done) =>
         // })
     })
 
-    done();
-}
+};
