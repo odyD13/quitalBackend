@@ -1,6 +1,6 @@
 import fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 import fastifyJwt from "@fastify/jwt";
-import fastifyMongo from '@fastify/mongodb';
+import fastifyMongo, { ObjectId } from '@fastify/mongodb';
 
 import { Server } from "socket.io";
 import { envars } from "./const.ts";
@@ -10,6 +10,30 @@ import { ConversationRoute } from "./routes/conversation.route.ts";
 
 export async function buildApp(opts = {}) {
     const app = fastify(opts);
+
+    /*
+        Client creates an account/Signs in
+                        |
+                        |
+                        V
+        All conversations are shown to the Client 
+                        |
+                        |
+                        V
+        Client selects a contact (taking the conversation's ID) 
+                        |
+                        |
+                        V
+        Client sends a message with the conversation's ID
+        to the server to redirect the client to the associated room.
+                        |
+                        |
+                        V
+        Client connects to the room and start sending real-time messages
+        with the contact of the conversation.
+                        
+
+    */
     const socketio = new Server(app.server, {});
 
     app.register(fastifyJwt, {
@@ -34,13 +58,31 @@ export async function buildApp(opts = {}) {
     app.decorate("database", {
         users: app.mongo.db?.collection('users'),
         conversations: app.mongo.db?.collection('conversations')
-    })
+    });
 
     const USERS_DATABASE = app.mongo.db?.collection('users');
     const CONVERSATION_DATABASE = app.mongo.db?.collection('conversations');
 
     socketio.on("connection", socket => {
         console.log("new client connected");
+        let roomID: string;
+
+        socket.on("chat:with", (payload, callback) =>{
+
+            roomID = payload;
+            const conversation = CONVERSATION_DATABASE?.find({_id: new ObjectId(roomID)});
+
+            if(!conversation)
+                return socket.disconnect();
+
+
+            socket.join(roomID);
+
+        });
+
+        socket.on("message", (message) => {
+            socket.to(roomID).emit("message", message);
+        });
     });
 
     app.addHook("preClose", (done) => {
@@ -62,5 +104,5 @@ export async function buildApp(opts = {}) {
         });
     });
 
-    return {app, CONVERSATION_DATABASE, USERS_DATABASE}
+    return {app, socketio, CONVERSATION_DATABASE, USERS_DATABASE};
 }

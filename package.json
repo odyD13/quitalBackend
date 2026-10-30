@@ -16,7 +16,8 @@
     "@fastify/jwt": "^10.2.4",
     "@fastify/mongodb": "^10.0.2",
     "fastify": "^5.12.5",
-    "socket.io": "^4.8.4"
+    "socket.io": "^4.8.4",
+    "socket.io-client": "^4.8.4"
   },
   "devDependencies": {
     "@types/node": "^26.6.4",

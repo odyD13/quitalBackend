@@ -61,7 +61,7 @@ export const ConversationRoute: FastifyPluginAsync = async (fastify) => {
         const conversationExists = await conversationsDatabase?.findOne({participants: { $all: [new ObjectId(userID), new ObjectId(id)], $size: 2 }})
 
         if(conversationExists)
-            return reply.send({
+            return reply.status(208).send({
                 message: "Conversation already exists"
         })
         /* 3. Creamos la sesión si los dos requisitos se cumplen */
