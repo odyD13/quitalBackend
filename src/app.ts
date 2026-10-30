@@ -8,6 +8,8 @@ import { envars } from "./const.ts";
 import { AuthRoute } from "./routes/auth.route.ts";
 import { ConversationRoute } from "./routes/conversation.route.ts";
 
+import { conversationHandler } from "./handlers/conversation.socket.ts";
+
 export async function buildApp(opts = {}) {
     const app = fastify(opts);
 
@@ -65,24 +67,8 @@ export async function buildApp(opts = {}) {
 
     socketio.on("connection", socket => {
         console.log("new client connected");
-        let roomID: string;
-
-        socket.on("chat:with", (payload, callback) =>{
-
-            roomID = payload;
-            const conversation = CONVERSATION_DATABASE?.find({_id: new ObjectId(roomID)});
-
-            if(!conversation)
-                return socket.disconnect();
-
-
-            socket.join(roomID);
-
-        });
-
-        socket.on("message", (message) => {
-            socket.to(roomID).emit("message", message);
-        });
+        
+        conversationHandler(app, socket);
     });
 
     app.addHook("preClose", (done) => {
