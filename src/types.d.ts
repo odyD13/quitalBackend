@@ -1,10 +1,13 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type { Collection, Document } from "mongodb";
 
-export interface IUser {
-    userID: string,
+export interface UserDTO {
     username: string,
     password: string
+}
+
+export type IUser = UserDTO & {
+    userID: string,
 }
 
 declare module "fastify" {

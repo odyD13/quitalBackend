@@ -46,12 +46,12 @@ export async function buildApp(opts = {}) {
     app.addHook("preClose", (done) => {
         // close all active connections on this server
         socketio.local.disconnectSockets(true);
+        socketio.close();
         done();
     });
 
     app.register(AuthRoute, { prefix: "/auth" });
     app.register(ConversationRoute, { prefix: "/conversation" });
-
 
     app.get("/", (request, reply) => USERS_DATABASE?.find({}).toArray());
 
