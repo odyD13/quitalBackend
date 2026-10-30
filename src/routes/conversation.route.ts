@@ -66,7 +66,7 @@ export const ConversationRoute: FastifyPluginAsync = async (fastify) => {
         })
         /* 3. Creamos la sesión si los dos requisitos se cumplen */
 
-        conversationsDatabase?.insertOne({
+        await conversationsDatabase?.insertOne({
             "participants": [
                 new ObjectId(id),
                 new ObjectId(userID),

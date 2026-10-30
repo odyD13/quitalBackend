@@ -8,10 +8,10 @@ export const AuthRoute: FastifyPluginAsync = async (fastify) => {
         return "GET /signup"
     });
 
-    fastify.post('/signup', (request, reply) => {
+    fastify.post('/signup', async (request, reply) => {
         console.log(request.headers['content-type']);
         const { username, password } = request.body as IUser;
-        usersDatabase?.insertOne({ username, password });
+        await usersDatabase?.insertOne({ username, password });
         reply.status(200).send({ username, password });
     });
 
