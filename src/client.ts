@@ -29,48 +29,116 @@ async function main() {
         const token = loginData.token;
         console.log("Login successful!");
 
-        // 2. Ask for the other user ID to create/get a conversation
-        console.log("\n=== Start Conversation ===");
-        const targetUserId = await rl.question("Enter other user ID (_id): ");
+        // 2. Select conversation type (Direct 1-to-1 or Group)
+        console.log("\n=== Choose Chat Mode ===");
+        console.log("1. Direct (1-to-1) Conversation");
+        console.log("2. Create New Group");
+        console.log("3. Join Existing Group by ID");
+        const mode = (await rl.question("Select option (1/2/3): ")).trim();
 
-        // Try creating the conversation (POST /conversation/:id)
-        const createConvRes = await fetch(`${SERVER_URL}/conversation/${targetUserId.trim()}`, {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${token}`
+        let roomId: string | null = null;
+
+        if (mode === "2") {
+            // Create a group
+            console.log("\n=== Create Group ===");
+            const groupName = await rl.question("Group Name: ");
+            const membersInput = await rl.question("Member User IDs (comma-separated, at least 2 other users): ");
+            const members = membersInput
+                .split(",")
+                .map((m) => m.trim())
+                .filter((m) => m.length > 0);
+
+            const createGroupRes = await fetch(`${SERVER_URL}/group`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({ name: groupName, members })
+            });
+
+            const groupData = await createGroupRes.json();
+            if (!createGroupRes.ok) {
+                console.error("Failed to create group:", groupData);
+                rl.close();
+                return;
             }
-        });
 
-        const createConvData = await createConvRes.json();
-        if (!createConvRes.ok && createConvRes.status !== 400) {
-            console.error("Error creating conversation:", createConvData);
+            roomId = groupData.groupId || groupData._id;
+            console.log(`Group created successfully! Group ID: ${roomId}`);
+
+        } else if (mode === "3") {
+            // Join existing group
+            console.log("\n=== Join Existing Group ===");
+            const groupId = (await rl.question("Enter Group ID: ")).trim();
+
+            const getGroupRes = await fetch(`${SERVER_URL}/group/${groupId}`, {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+            const groupData = await getGroupRes.json();
+            if (!getGroupRes.ok || !groupData._id) {
+                console.error("Failed to fetch group info:", groupData);
+                rl.close();
+                return;
+            }
+
+            roomId = groupData._id;
+            console.log(`Connected to group "${groupData.name}" (${roomId})`);
+
+        } else {
+            // Direct 1-to-1 conversation
+            console.log("\n=== Start Direct Conversation ===");
+            const targetUserId = (await rl.question("Enter other user ID (_id): ")).trim();
+
+            // Try creating the conversation (POST /conversation/:id)
+            const createConvRes = await fetch(`${SERVER_URL}/conversation/${targetUserId}`, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+            const createConvData = await createConvRes.json();
+            if (!createConvRes.ok && createConvRes.status !== 400) {
+                console.error("Error creating conversation:", createConvData);
+            }
+
+            // Obtain conversation details (GET /conversation/:id) to get its _id
+            const getConvRes = await fetch(`${SERVER_URL}/conversation/${targetUserId}`, {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+            const convData = await getConvRes.json();
+            if (!getConvRes.ok || !convData._id) {
+                console.error("Failed to retrieve conversation:", convData);
+                rl.close();
+                return;
+            }
+
+            roomId = convData._id;
+            console.log(`Found conversation with ID: ${roomId}`);
         }
 
-        // 3. Obtain conversation details (GET /conversation/:id) to get its _id
-        const getConvRes = await fetch(`${SERVER_URL}/conversation/${targetUserId.trim()}`, {
-            method: "GET",
-            headers: {
-                "Authorization": `Bearer ${token}`
-            }
-        });
-
-        const convData = await getConvRes.json();
-        if (!getConvRes.ok || !convData._id) {
-            console.error("Failed to retrieve conversation:", convData);
+        if (!roomId) {
+            console.error("Invalid room ID.");
             rl.close();
             return;
         }
 
-        const conversationId = convData._id;
-        console.log(`Found conversation with ID: ${conversationId}`);
-
-        // 4. Connect to socket.io and join room
+        // 3. Connect to socket.io and join room
         console.log("\nConnecting to Socket.IO server...");
         const socket = io(SERVER_URL);
 
         socket.on("connect", () => {
-            console.log(`Socket connected (id: ${socket.id}). Joined room: ${conversationId}`);
-            socket.emit("chat:with", conversationId);
+            console.log(`Socket connected (id: ${socket.id}). Joined room: ${roomId}`);
+            socket.emit("chat:with", roomId);
             console.log("You can start chatting now! Type your message and hit Enter (type /exit to leave):\n");
 
             rl.setPrompt("> ");
@@ -109,7 +177,7 @@ async function main() {
 
             if (trimmed.length > 0) {
                 socket.emit("message", {
-                    room: conversationId,
+                    room: roomId,
                     text: trimmed,
                     sender: username
                 });

@@ -9,19 +9,19 @@ importers:
   .:
     dependencies:
       '@fastify/jwt':
-        specifier: ^10.2.4
+        specifier: 10.2.4
         version: 10.2.4
       '@fastify/mongodb':
-        specifier: ^10.0.2
+        specifier: 10.0.2
         version: 10.0.2
       fastify:
-        specifier: ^5.12.5
+        specifier: 5.12.5
         version: 5.12.5
       socket.io:
-        specifier: ^4.8.4
+        specifier: 4.8.4
         version: 4.8.4
       socket.io-client:
-        specifier: ^4.8.4
+        specifier: 4.8.4
         version: 4.8.4
     devDependencies:
       '@types/node':

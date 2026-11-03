@@ -7,12 +7,13 @@ import { envars } from "./const.ts";
 
 import { AuthRoute } from "./routes/auth.route.ts";
 import { ConversationRoute } from "./routes/conversation.route.ts";
+import { GroupRoute } from "./routes/group.route.ts";
 
 import { conversationHandler } from "./handlers/conversation.socket.ts";
 
 export async function buildApp(opts = {}) {
+    
     const app = fastify(opts);
-
     /*
         Client creates an account/Signs in
                         |
@@ -47,6 +48,9 @@ export async function buildApp(opts = {}) {
         database: envars.MONGO_DBNAME as string
     });
 
+    const USERS_DATABASE = app.mongo.db?.collection('users');
+    const CONVERSATION_DATABASE = app.mongo.db?.collection('conversations');
+
     app.decorate("verifyJWT", async (request: FastifyRequest, reply: FastifyReply) => {
         try {
             // jwtVerify() busca automáticamente el token en la cabecera 'Authorization: Bearer <TOKEN>'
@@ -62,12 +66,8 @@ export async function buildApp(opts = {}) {
         conversations: app.mongo.db?.collection('conversations')
     });
 
-    const USERS_DATABASE = app.mongo.db?.collection('users');
-    const CONVERSATION_DATABASE = app.mongo.db?.collection('conversations');
-
     socketio.on("connection", socket => {
         console.log("new client connected");
-        
         conversationHandler(app, socket);
     });
 
@@ -80,6 +80,7 @@ export async function buildApp(opts = {}) {
 
     app.register(AuthRoute, { prefix: "/auth" });
     app.register(ConversationRoute, { prefix: "/conversation" });
+    app.register(GroupRoute, { prefix: "/group" });
 
     app.get("/", (request, reply) => USERS_DATABASE?.find({}).toArray());
 
@@ -90,5 +91,5 @@ export async function buildApp(opts = {}) {
         });
     });
 
-    return {app, socketio, CONVERSATION_DATABASE, USERS_DATABASE};
+    return { app };
 }

@@ -6,16 +6,13 @@ export const conversationHandler = (server: FastifyInstance, socket: Socket) => 
     let roomID: string;
 
     socket.on("chat:with", (payload, callback) => {
-
         roomID = payload;
         const conversation = server.database.conversations?.find({ _id: new ObjectId(roomID) });
 
         if (!conversation)
             return socket.disconnect();
 
-
         socket.join(roomID);
-
     });
 
     socket.on("message", (message) => {

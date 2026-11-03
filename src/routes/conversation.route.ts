@@ -18,7 +18,7 @@ export const ConversationRoute: FastifyPluginAsync = async (fastify) => {
 
         return reply.send(conversationsFound)
         
-    })
+    });
 
     fastify.get("/:id", {preHandler: [fastify.verifyJWT]}, async (request, reply) => {
         const {id}: any = request.params;
@@ -42,7 +42,7 @@ export const ConversationRoute: FastifyPluginAsync = async (fastify) => {
 
         return reply.send(conversationFound)
         
-    })
+    });
 
     fastify.post("/:id", {preHandler: [fastify.verifyJWT]}, async (request, reply) => {
         const {id}: any = request.params;

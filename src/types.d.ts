@@ -10,6 +10,11 @@ export type IUser = UserDTO & {
     userID: string,
 }
 
+export interface GroupDTO {
+    name: string;
+    members: string[]; 
+}
+
 declare module "fastify" {
     interface FastifyInstance {
         verifyJWT: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
