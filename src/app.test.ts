@@ -26,10 +26,10 @@ test("Get users in '/' route", async (t: TestContext) => {
             url: "/",
         });
 
-        const { username, password } = response.json()[0];
-        const userResponsed = { username, password };
+        const { username } = response.json()[0];
+        const userResponsed = { username };
 
-        assert.deepStrictEqual(userResponsed, newUser);
+        assert.deepStrictEqual(userResponsed.username, newUser.username);
     });
 
     t.after(async () => {

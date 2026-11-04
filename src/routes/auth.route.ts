@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import type { IUser } from "../types.js";
+import argon2 from "argon2";
 
 export const AuthRoute: FastifyPluginAsync = async (fastify) => {
     const usersDatabase = fastify.database.users;
@@ -11,8 +12,11 @@ export const AuthRoute: FastifyPluginAsync = async (fastify) => {
     fastify.post('/signup', async (request, reply) => {
         console.log(request.headers['content-type']);
         const { username, password } = request.body as IUser;
-        await usersDatabase?.insertOne({ username, password });
-        reply.status(200).send({ username, password });
+
+        const hashedPassword = await argon2.hash(password);
+        await usersDatabase?.insertOne({ username, password: hashedPassword });
+
+        reply.status(200).send({ username, message: "User Created Successfully!"});
     });
 
     fastify.post("/login", async (request, reply) => {
@@ -26,10 +30,12 @@ export const AuthRoute: FastifyPluginAsync = async (fastify) => {
             return reply.status(401).send({ error: "Nombre de usuario o contraseña incorrectos" });
         }
 
-        // Generamos el JWT. Expirará en 15 minutos para mitigar riesgos de seguridad.
-        if (userFound.password !== password)
+        const isMatch = await argon2.verify(userFound.password, password);
+        if (!isMatch) {
             return reply.status(401).send({ error: "Nombre de usuario o contraseña incorrectos" });
+        }
 
+        // Generamos el JWT. Expirará en 15 minutos para mitigar riesgos de seguridad.
         const token = fastify.jwt.sign(
             { username, userID: userFound._id },
             { expiresIn: '15m' }
